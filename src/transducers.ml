@@ -6,8 +6,7 @@ type ('r, 'a) reducer = 'r -> 'a -> 'a
     and produces an incremented result. *)
 
 type ('a, 'b, 'r) transducer = ('b, 'r) reducer -> ('a, 'r) reducer
-(** [transducer] take a reducing function and returns another reducing
-    function. *)
+(** [transducer] takes a reducer, applies a transformation and returns a new reducer. *)
 
 let transduce_list t xs = List.rev (List.fold xs ~init:[] ~f:(t (flip cons)))
 
@@ -17,10 +16,8 @@ let map : ('a -> 'b) -> ('r -> 'b -> 'r) -> ('r -> 'a -> 'r) =
 let filter : ('a -> bool) -> ('r -> 'a -> 'r) -> ('r -> 'a -> 'r) =
   fun p step r a -> if p a then step r a else r
 
-let (<<) f g = fun x -> f (g x)
-
 let () =
-  let plan = map ((+) 10) << filter odd in
+  let plan = fun x -> map ((+) 10) (filter odd x) in
   let res  = transduce_list plan (List.range 0 100) in
   print (fmt "#res = %d" (List.length res))
 
