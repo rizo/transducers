@@ -1,23 +1,37 @@
 
 open Elements
 
-type ('r, 'a) reducer = 'r -> 'a -> 'a
-(** [reducer] is a type of a function that takes a result and an element
-    and produces an incremented result. *)
+type ('r, 'a) reducer = 'r -> 'a -> 'r
 
-type ('a, 'b, 'r) transducer = ('b, 'r) reducer -> ('a, 'r) reducer
-(** [transducer] takes a reducer, applies a transformation and returns a new reducer. *)
+type ('a, 'b) transducer = { t : 'r . ('r, 'b) reducer -> ('r, 'a) reducer }
 
-let transduce_list t xs = List.rev (List.fold xs ~init:[] ~f:(t (flip cons)))
+module Iter
+  : sig
+    val map : ('a ->   'b) -> ('a, 'b) transducer
+    val filter : ('a -> bool) -> ('a, 'a) transducer
+    val compose : ('a, 'b) transducer -> ('b, 'c) transducer -> ('a, 'c) transducer
+  end
+= struct
 
-let map : ('a -> 'b) -> ('r -> 'b -> 'r) -> ('r -> 'a -> 'r) =
-  fun f step r a -> step r (f a)
+  let map f =
+    { t = fun step r a -> step r (f a) }
 
-let filter : ('a -> bool) -> ('r -> 'a -> 'r) -> ('r -> 'a -> 'r) =
-  fun p step r a -> if p a then step r a else r
+  let filter p =
+    { t = fun step r a ->
+          if p a then step r a else r }
 
-let () =
-  let plan = fun x -> map ((+) 10) (filter odd x) in
-  let res  = transduce_list plan (List.range 0 100) in
-  print (fmt "#res = %d" (List.length res))
+  let compose { t = t1 } { t = t2 } =
+    { t = fun step -> t1 (t2 step) }
+end
+
+let (<<) t1 t2 = Iter.compose t2 t1
+let (>>) = Iter.compose
+
+let transduce_list { t } xs =
+  List.rev (List.fold xs ~init:[] ~f:(t (flip cons)))
+
+let test () =
+  let plan = Iter.(map ((+) 10) >> filter odd >> map Int.to_string) in
+  let res  = transduce_list plan (List.range 0 10) in
+  print (fmt "res = [%s]" (String.concat "; " res))
 
