@@ -1,8 +1,8 @@
 
 type 'a reduced = Continue of 'a | Done of 'a
 
-type 'a iterable =
-    Iterable : 's * ('s -> ('a * 's) option) -> 'a iterable
+type 'a iterator =
+    Iterator : 's * ('s -> ('a * 's) option) -> 'a iterator
 
 type ('a, 'r) reducer =
     Reducer : ('s * ('s -> 'r -> 'a -> 's * 'r reduced)) -> ('a, 'r) reducer
@@ -41,7 +41,7 @@ let take n =
 
 let stateless f = Reducer ((), fun () x y -> (), Continue (f x y))
 
-let transduce { this = xf } f r0 (Iterable (input, next)) =
+let transduce { this = xf } f r0 (Iterator (input, next)) =
   let (Reducer (s0, step)) = xf (stateless f) in
   let rec loop s r input =
     match next input with
@@ -56,17 +56,25 @@ let transduce { this = xf } f r0 (Iterable (input, next)) =
 
 (* Producers *)
 
-let list input =
+let of_list input =
   let next l =
     match l with
     | []      -> None
     | x :: xs -> Some (x, xs) in
-  Iterable (input, next)
+  Iterator (input, next)
 
-let chan input =
+let of_chan input =
   let next c =
     try Some (input_line c, c)
     with End_of_file -> None in
-  Iterable (input, next)
+  Iterator (input, next)
 
+(* Consumers *)
+
+let to_list xf iterator =
+  List.rev (transduce xf (fun r x -> x :: r) [] iterator)
+
+let to_chan c0 xf iterator =
+  let _ = transduce xf (fun r x -> output_string r (x ^ "\n"); r) c0 iterator in
+  ()
 
