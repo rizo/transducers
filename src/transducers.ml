@@ -4,61 +4,55 @@ type 'a reduced = Continue of 'a | Done of 'a
 type 'a iterable =
     Iterable : 's * ('s -> ('a * 's) option) -> 'a iterable
 
-type ('s, 'a, 'r) reducer =
-  { init : 's;
-    step : 's -> 'r -> 'a -> ('s * 'r reduced);
-    stop : 's -> 'r -> 'r }
+type ('a, 'r) reducer =
+    Reducer : ('s * ('s -> 'r -> 'a -> 's * 'r reduced)) -> ('a, 'r) reducer
 
-type ('s, 't, 'a, 'b) transducer =
-  { this : 'r . ('t, 'b, 'r) reducer -> ('s, 'a, 'r) reducer }
+type ('a, 'b) transducer =
+  { this : 'r . ('b, 'r) reducer -> ('a, 'r) reducer }
 
-let compose { this = f } { this = g } =
+let compose { this = g } { this = f } =
   { this = fun step -> f (g step) }
 
-let (>>) f g = compose f g
-let (<<) g f = compose f g
+let (>>) g f = compose f g
+let (<<) f g = compose f g
 
 let map f =
-  let this reducer =
-    { reducer with step = fun s r x -> reducer.step s r (f x) } in
-  { this}
+  let this (Reducer (s, next)) =
+    Reducer (s, fun s r x -> next s r (f x)) in
+  { this }
 
 let filter p =
-  let this reducer =
-        { reducer with step = fun s r x ->
-              if p x then reducer.step s r x
-              else (s, Continue r) } in
+  let this (Reducer (s, next)) =
+    Reducer (s, fun s r x ->
+        if p x then next s r x
+        else (s, Continue r)) in
   { this }
 
 let take n =
-  let this reducer =
-    { init = (n, reducer.init);
-      stop = (fun (_, s) -> reducer.stop s);
-      step = (fun (i, s) r x ->
-          if i > 0 then
-            let (s', r') = reducer.step s r x in
-            ((i - 1, s'), r')
-          else
-            ((i, s), Done r)) } in
+  let this (Reducer (s0, next)) =
+    Reducer ((s0, 0),
+             fun (s, i) r a ->
+               if i >= n then
+                 ((s, i), Done r)
+               else
+                 let s', r' = next s r a in
+                 ((s', i + 1), r')) in
   { this }
 
-let stateless f = { init = ();
-                    stop = (fun s r -> r);
-                    step = (fun () x y -> ((), Continue (f x y))) }
-
+let stateless f = Reducer ((), fun () x y -> (), Continue (f x y))
 
 let transduce { this = xf } f r0 (Iterable (input, next)) =
-  let reducer = xf (stateless f) in
+  let (Reducer (s0, step)) = xf (stateless f) in
   let rec loop s r input =
     match next input with
     | None -> (s, r)
     | Some (x, xs) ->
-      begin match reducer.step s r x with
+      begin match step s r x with
         | s, Done r     -> (s, r)
         | s, Continue r -> loop s r xs
       end in
-  let (s, r) = loop reducer.init r0 input in
-  reducer.stop s r
+  let (s, r) = loop s0 r0 input in
+  r
 
 (* Producers *)
 
