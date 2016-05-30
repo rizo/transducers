@@ -16,6 +16,21 @@ let compose { this = g } { this = f } =
 let (>>) g f = compose f g
 let (<<) f g = compose f g
 
+let stateless f = Reducer ((), fun () x y -> (), Continue (f x y))
+
+let transduce { this = xf } f r0 (Iterator (input, next)) =
+  let (Reducer (s0, step)) = xf (stateless f) in
+  let rec loop s r input =
+    match next input with
+    | None -> (s, r)
+    | Some (x, xs) ->
+      begin match step s r x with
+        | s, Done r     -> (s, r)
+        | s, Continue r -> loop s r xs
+      end in
+  let (s, r) = loop s0 r0 input in
+  r
+
 let map f =
   let this (Reducer (s, next)) =
     Reducer (s, fun s r x -> next s r (f x)) in
@@ -39,31 +54,16 @@ let take n =
                  ((s', i + 1), r')) in
   { this }
 
-let stateless f = Reducer ((), fun () x y -> (), Continue (f x y))
-
-let transduce { this = xf } f r0 (Iterator (input, next)) =
-  let (Reducer (s0, step)) = xf (stateless f) in
-  let rec loop s r input =
-    match next input with
-    | None -> (s, r)
-    | Some (x, xs) ->
-      begin match step s r x with
-        | s, Done r     -> (s, r)
-        | s, Continue r -> loop s r xs
-      end in
-  let (s, r) = loop s0 r0 input in
-  r
-
 (* Producers *)
 
-let of_list input =
+let iter_list input =
   let next l =
     match l with
     | []      -> None
     | x :: xs -> Some (x, xs) in
   Iterator (input, next)
 
-let of_chan input =
+let iter_chan input =
   let next c =
     try Some (input_line c, c)
     with End_of_file -> None in
@@ -71,10 +71,16 @@ let of_chan input =
 
 (* Consumers *)
 
-let to_list xf iterator =
-  List.rev (transduce xf (fun r x -> x :: r) [] iterator)
+let sum xf iterator =
+  transduce xf (+) 0 iterator
 
-let to_chan c0 xf iterator =
-  let _ = transduce xf (fun r x -> output_string r (x ^ "\n"); r) c0 iterator in
-  ()
+let len xf iterator =
+  transduce xf (fun r _ -> r + 1) 0 iterator
+
+let into_list l0 xf iterator =
+  List.rev (transduce xf (fun r x -> x :: r) l0 iterator)
+
+let into_chan c0 xf iterator =
+  let _ = (transduce xf (fun r x -> output_string r (x ^ "\n"); r) c0 iterator)
+  in ()
 
