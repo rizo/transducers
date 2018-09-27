@@ -1,0 +1,19 @@
+lib: [
+  "_build/install/default/lib/transducers/META" {"META"}
+  "_build/install/default/lib/transducers/opam" {"opam"}
+  "_build/install/default/lib/transducers/transducers.cmi" {"transducers.cmi"}
+  "_build/install/default/lib/transducers/transducers.cmx" {"transducers.cmx"}
+  "_build/install/default/lib/transducers/transducers.cmt" {"transducers.cmt"}
+  "_build/install/default/lib/transducers/transducers.cmti" {"transducers.cmti"}
+  "_build/install/default/lib/transducers/transducers.mli" {"transducers.mli"}
+  "_build/install/default/lib/transducers/transducers.ml" {"transducers.ml"}
+  "_build/install/default/lib/transducers/transducers.cma" {"transducers.cma"}
+  "_build/install/default/lib/transducers/transducers.cmxa" {"transducers.cmxa"}
+  "_build/install/default/lib/transducers/transducers.a" {"transducers.a"}
+  "_build/install/default/lib/transducers/transducers.cmxs" {"transducers.cmxs"}
+  "_build/install/default/lib/transducers/transducers.dune" {"transducers.dune"}
+]
+doc: [
+  "_build/install/default/doc/transducers/README.md"
+  "_build/install/default/doc/transducers/LICENSE"
+]

@@ -1,0 +1,22 @@
+opam-version: "2.0"
+version: "dev"
+author: "Rizo I. <rizo@odis.io>"
+maintainer: "Rizo I. <rizo@odis.io>"
+license: "BSD-3"
+build: [
+  ["dune" "build" "-p" name]
+  ["dune" "build" "@doc" "-p" name] {with-doc}
+]
+run-test: [
+  ["dune" "runtest" "-p" name]
+]
+depends: [
+  "dune" {build}
+  "odoc" {doc}
+  "alcotest" {test}
+]
+synopsis: "Clojure's Transducers in OCaml"
+tags: [ "streaming" "folds" "iterators" ]
+homepage: "https://github.com/rizo/transducers"
+bug-reports: "https://github.com/rizo/transducers/issues"
+dev-repo: "git+https://github.com/rizo/transducers"

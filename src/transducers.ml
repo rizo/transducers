@@ -28,7 +28,7 @@ let transduce { this = xf } f r0 (Iterator (input, next)) =
         | s, Done r     -> (s, r)
         | s, Continue r -> loop s r xs
       end in
-  let (s, r) = loop s0 r0 input in
+  let (_s, r) = loop s0 r0 input in
   r
 
 let map f =
@@ -69,16 +69,10 @@ let iter_chan input =
     with End_of_file -> None in
   Iterator (input, next)
 
-(* Consumers *)
-
-let sum xf iterator =
-  transduce xf (+) 0 iterator
-
-let len xf iterator =
-  transduce xf (fun r _ -> r + 1) 0 iterator
 
 let into_list l0 xf iterator =
   List.rev (transduce xf (fun r x -> x :: r) l0 iterator)
+
 
 let into_chan c0 xf iterator =
   let _ = (transduce xf (fun r x -> output_string r (x ^ "\n"); r) c0 iterator)
